@@ -94,6 +94,7 @@ export const ConversationView = ({ conversationId, initialMessages }: Conversati
                 <ChatEmpty />
             ) : (
                 <ChatMessages 
+                    conversationId={conversationId}
                     messages={messages} 
                     status={status} 
                     error={error}

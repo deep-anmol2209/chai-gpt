@@ -112,3 +112,61 @@ export async function getConversation(conversationId: string) {
     }
     return conversation;
 }
+
+export async function branchConversation(parentConversationId: string, assistantMessageId: string) {
+    const user = await requireUser();
+
+    // 1. Fetch parent conversation
+    const parentConversation = await prisma.conversation.findFirst({
+        where: { id: parentConversationId, userId: user.id },
+    });
+
+    if (!parentConversation) {
+        throw new Error("Parent conversation not found");
+    }
+
+    // 2. Fetch all messages in parent conversation ordered by createdAt asc
+    const parentMessages = await prisma.message.findMany({
+        where: { conversationId: parentConversationId },
+        orderBy: { createdAt: "asc" },
+    });
+
+    // 3. Find the slice index up to assistantMessageId
+    const targetIndex = parentMessages.findIndex(msg => msg.id === assistantMessageId);
+    if (targetIndex === -1) {
+        throw new Error("Branch target message not found in parent conversation");
+    }
+
+    const messagesToCopy = parentMessages.slice(0, targetIndex + 1);
+
+    // 4. Create new branched conversation
+    const newConversation = await prisma.conversation.create({
+        data: {
+            userId: user.id,
+            parentId: parentConversationId,
+            title: `${parentConversation.title} (Branched)`,
+            model: parentConversation.model,
+            systemPrompt: parentConversation.systemPrompt,
+        },
+    });
+
+    // 5. Copy messages to the new conversation in order
+    for (const msg of messagesToCopy) {
+        const newMessageId = "msg_" + Math.random().toString(36).substring(2, 18);
+        await prisma.message.create({
+            data: {
+                id: newMessageId,
+                conversationId: newConversation.id,
+                role: msg.role,
+                content: msg.content,
+                parts: msg.parts || undefined,
+                metadata: msg.metadata || undefined,
+                status: "COMPLETED",
+                createdAt: msg.createdAt,
+            },
+        });
+    }
+
+    revalidatePath("/");
+    return newConversation.id;
+}

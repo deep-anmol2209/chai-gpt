@@ -2,6 +2,11 @@
 
 import { type UIMessage } from "ai";
 import type { ChatStatus } from "ai";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { AlertTriangle, RotateCw, X, Copy, GitBranch } from "lucide-react";
 
 import {
   Conversation,
@@ -12,11 +17,14 @@ import {
   Message,
   MessageContent,
   MessageResponse,
+  MessageActions,
+  MessageAction,
 } from "@/components/ai-elements/message";
 import { Loader } from "@/components/ai-elements/loader";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RotateCw, X } from "lucide-react";
+import { branchConversation } from "../actions/conversation-actions";
+import { queryKeys } from "../utils/query-keys";
 
 function getMessageText(message: UIMessage) {
   return message.parts
@@ -78,6 +86,7 @@ function parseChatError(error: Error | undefined) {
 }
 
 type ChatMessagesProps = {
+  conversationId: string;
   messages: UIMessage[];
   status: ChatStatus;
   error?: Error;
@@ -89,12 +98,40 @@ type ChatMessagesProps = {
  * Renders the conversation message list with responses, loading indicator, and structured errors.
  */
 export function ChatMessages({
+  conversationId,
   messages,
   status,
   error,
   onRegenerate,
   onClearError,
 }: ChatMessagesProps) {
+  const [isBranching, setIsBranching] = useState<string | null>(null);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Response copied to clipboard");
+  };
+
+  const handleBranch = async (messageId: string) => {
+    try {
+      setIsBranching(messageId);
+      const newId = await branchConversation(conversationId, messageId);
+      
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.all,
+      });
+
+      toast.success("Conversation branched successfully!");
+      router.push(`/c/${newId}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to branch conversation.");
+    } finally {
+      setIsBranching(null);
+    }
+  };
+
   const isWaiting =
     status === "submitted" && messages.at(-1)?.role === "user";
 
@@ -114,6 +151,32 @@ export function ChatMessages({
                 </MessageResponse>
               )}
             </MessageContent>
+            {message.role === "assistant" && (
+              <MessageActions className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-1 mt-1">
+                <MessageAction
+                  tooltip="Copy response"
+                  onClick={() => handleCopy(getMessageText(message))}
+                >
+                  <Copy className="size-4" />
+                </MessageAction>
+                {conversationId !== "new" && (
+                  <MessageAction
+                    tooltip="Branch conversation"
+                    onClick={() => handleBranch(message.id)}
+                    disabled={
+                      isBranching === message.id ||
+                      (status !== "ready" && message.id === messages.at(-1)?.id)
+                    }
+                  >
+                    {isBranching === message.id ? (
+                      <Loader size={14} className="size-3.5" />
+                    ) : (
+                      <GitBranch className="size-4" />
+                    )}
+                  </MessageAction>
+                )}
+              </MessageActions>
+            )}
           </Message>
         ))}
 

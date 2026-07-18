@@ -53,6 +53,9 @@ model Conversation{
   updateAt DateTime @updatedAt
   lastMessageAt DateTime? @default(now())
   messages Message[]
+  parentId String?
+  parent Conversation? @relation("Branch", fields: [parentId], references: [id], onDelete: SetNull)
+  children Conversation[] @relation("Branch")
   
   @@index([userId, lastMessageAt(sort:Desc)]) 
   @@index([userId, isPinned, lastMessageAt(sort: Desc)] )
