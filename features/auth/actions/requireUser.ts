@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
+import { onBoardUser } from "./auth";
 
 /**
  * Ensures the request is authenticated and the user has completed onboarding.
@@ -12,14 +13,19 @@ import { auth } from "@clerk/nextjs/server";
 export async function requireUser() {
     const { userId } = await auth.protect();
   
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { clerkId: userId },
     });
   
     if (!user) {
-      throw new Error("User not found. Complete onboarding first.");
+      const onboardedUser = await onBoardUser();
+      if (!onboardedUser) {
+        throw new Error("User not found. Complete onboarding first.");
+      }
+      return onboardedUser;
     }
   
     return user;
   }
+
   

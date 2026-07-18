@@ -17,13 +17,14 @@ import { cn } from "@/lib/utils";
 type ModelSelectorProps = {
   conversationId: string;
   currentModel: string;
+  onModelChange?: (model: string) => void;
 };
 
 /**
  * ModelSelector — A sleek, premium dropdown selector located inside the chat composer.
  * Allows users to choose and update which AI model they want to use for the active chat.
  */
-export function ModelSelector({ conversationId, currentModel }: ModelSelectorProps) {
+export function ModelSelector({ conversationId, currentModel, onModelChange }: ModelSelectorProps) {
   const updateConversation = useUpdateConversation();
   
   const activeModel = SUPPORTED_MODELS.find((m) => m.id === currentModel) || {
@@ -34,10 +35,14 @@ export function ModelSelector({ conversationId, currentModel }: ModelSelectorPro
 
   const handleSelectModel = (modelId: string) => {
     if (modelId === currentModel) return;
-    updateConversation.mutate({
-      id: conversationId,
-      model: modelId,
-    });
+    if (conversationId === "new") {
+      onModelChange?.(modelId);
+    } else {
+      updateConversation.mutate({
+        id: conversationId,
+        model: modelId,
+      });
+    }
   };
 
   return (

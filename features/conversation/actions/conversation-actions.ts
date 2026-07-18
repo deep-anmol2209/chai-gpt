@@ -30,6 +30,33 @@ export async function createConversation(data: CreateConversation) {
     });
 }
 
+export async function createConversationAndFirstMessage(text: string, model: string) {
+    const user = await requireUser();
+
+    const conversation = await prisma.conversation.create({
+        data: {
+            userId: user.id,
+            title: text.trim().slice(0, 48) || "New Chat",
+            model: model,
+        },
+    });
+
+    const messageId = "msg_" + Math.random().toString(36).substring(2, 18);
+    await prisma.message.create({
+        data: {
+            id: messageId,
+            conversationId: conversation.id,
+            role: "USER",
+            content: text,
+            parts: [{ type: "text", text }] as any,
+            status: "COMPLETED",
+        },
+    });
+
+    revalidatePath("/");
+    return conversation.id;
+}
+
 export async function updateConversation(conversationId: string, data: UpdateConversation){
     const user= await requireUser();
     await assertConversationOwner(conversationId, user.id );

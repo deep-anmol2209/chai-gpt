@@ -1,15 +1,16 @@
-import { startNewChat } from '@/features/home/actions/start-new-chat'
-import { redirect } from 'next/navigation'
+import { ConversationView } from '@/features/conversation/components/conversation-view'
 import React from 'react'
 
 /**
- * Home page — creates a new chat and redirects to `/c/{id}`.
+ * Home page — renders the chat UI for a new, unsaved conversation.
  */
-const page = async() => {
-  const conversationId = await startNewChat()
-  
-  
-  redirect(`/c/${conversationId}`)
+const page = () => {
+  return (
+    <ConversationView
+      conversationId="new"
+      initialMessages={[]}
+    />
+  )
 }
 
 export default page

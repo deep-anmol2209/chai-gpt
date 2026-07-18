@@ -22,47 +22,59 @@ export async function onBoardUser(userData?: {
     };
   }
 
-  const existingByClerk = await prisma.user.findUnique({
-    where: { clerkId: user.clerkId },
-  });
-
-  if (existingByClerk) {
-    return await prisma.user.update({
+  try {
+    const existingByClerk = await prisma.user.findUnique({
       where: { clerkId: user.clerkId },
-      data: {
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        imageUrl: user.imageUrl,
-      },
-    });
-  }
-
-  if (user.email) {
-    const existingByEmail = await prisma.user.findUnique({
-      where: { email: user.email },
     });
 
-    if (existingByEmail) {
+    if (existingByClerk) {
       return await prisma.user.update({
-        where: { id: existingByEmail.id },
+        where: { clerkId: user.clerkId },
         data: {
-          clerkId: user.clerkId,
+          email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           imageUrl: user.imageUrl,
         },
       });
     }
-  }
 
-  return await prisma.user.create({
-    data: {
-      clerkId: user.clerkId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      imageUrl: user.imageUrl,
-    },
-  });
+    if (user.email) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      if (existingByEmail) {
+        return await prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            clerkId: user.clerkId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            imageUrl: user.imageUrl,
+          },
+        });
+      }
+    }
+
+    return await prisma.user.create({
+      data: {
+        clerkId: user.clerkId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl,
+      },
+    });
+  } catch (error: any) {
+    if (error && typeof error === "object" && error.code === "P2002") {
+      const existing = await prisma.user.findUnique({
+        where: { clerkId: user.clerkId },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+    throw error;
+  }
 }

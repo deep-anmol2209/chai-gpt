@@ -17,6 +17,7 @@ type ChatComposerProps = {
   conversationId: string;
   currentModel: string;
   onSend: (content: string) => Promise<void> | void;
+  onModelChange?: (model: string) => void;
   isSending?: boolean;
   placeholder?: string;
   className?: string;
@@ -30,6 +31,7 @@ export function ChatComposer({
   conversationId,
   currentModel,
   onSend,
+  onModelChange,
   isSending = false,
   placeholder = "Message ChaiGPT…",
   className,
@@ -72,7 +74,7 @@ export function ChatComposer({
     >
       <InputGroup className="h-auto min-h-14 rounded-3xl border-border/80 bg-background shadow-sm dark:bg-input/40">
         <InputGroupAddon align="inline-start" className="pl-2 pb-2 self-end">
-          <ModelSelector conversationId={conversationId} currentModel={currentModel} />
+          <ModelSelector conversationId={conversationId} currentModel={currentModel} onModelChange={onModelChange} />
         </InputGroupAddon>
         <InputGroupTextarea
           ref={textareaRef}
